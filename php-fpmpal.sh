@@ -63,19 +63,15 @@ echo
 
 
 ### Determine whether the PHP-FPM process is called php-fpm or php5-fpm
-phpfpm_installed=0
+export phpfpm_installed=0
 
-php-fpm -v 1> /dev/null 2>&1
-if [ $? == 0 ]; then
-   phpfpm_installed=1
-   fpm_type=`php-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
-fi
-
-php5-fpm -v 1> /dev/null 2>&1
-if [ $? == 0 ]; then
-   phpfpm_installed=1
-   fpm_type=`php5-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
-fi
+for PHPFPM in php-rpm php5-fpm /opt/remi/php*/root/usr/sbin/php-fpm; do
+    $PHPFPM -v 1>/dev/null 2>&1
+    if [ $? == 0 ]; then
+        phpfpm_installed=1
+        fpm_type=`$PHPFPM -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
+    fi
+done
 
 ### Exit if PHP-FPM is not installed
 if [ $phpfpm_installed == 0 ]; then
@@ -424,7 +420,7 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
       rhel7_check=`grep -v ^# /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1` > /dev/null
    fi
    # If this is RHEL 7 then use this formula
-   if [ $rhel7_check == '7' ]; then
+   if [ $rhel7_check -ge 7 ]; then
       total_phpfpm_allowed_memory=$(echo "`free -k | awk '/Mem/ {print $7}'` + $total_phpfpm_mem_usage" | bc)
    # If this is not RHEL 7 use this formula
    else
